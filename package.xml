@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+
+<package format="3">
+  <name>vio_alg</name>
+  <version>0.0.0</version>
+
+  <description>
+    ROS 2 integration, validation, bridge, and frame configuration for stereo VIO.
+  </description>
+
+  <maintainer email="evmart5665@gmail.com">
+    Eva Martinez
+  </maintainer>
+
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>rosgraph_msgs</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
