@@ -1,25 +1,34 @@
-
+%YAML: 1.0
+#TODO- fix syntax no[] for the non matrix values
 
 cam0: #left camera
   T_imu_cam:
-    #unsure
+    -[ 0, 0, 1,   0]
+    -[-1, 0, 0, +0.04]
+    -[0, -1, 0,   0]
+    -[ 0, 0, 0,   1]
 
   cam_overlaps: [1]
   camera_model: pinhole
-  distortion_coeffs: #unsure
+  distortion_coeffs: [0]
   distortion_model: radtan
   intrincics: [639.997, 639.997, 640, 400]
   resolution: [1280, 800]
-  rostopic: /vio/left/image_raw
+  rostopic: /image:=/world/default/model/x500_stereo_vio_0/link/vio_sensor_link/sensor/right_camera/image
+  timeshift_cam_imu: [0.0]
+
 
 cam1: #right camera
   T_imu_cam:
-    #unsure
-
+    -[0, 0, 1,    0]
+    -[-1, 0, 0, -0.04]
+    -[0, -1, 0,   0]
+    -[0, 0, 0,    1]
   cam_overlaps: [0]
   camera_model: pinhole
-  distortion_coeffs: #unsure
+  distortion_coeffs: [0]
   distortion_model: radtan
   intrincics: [639.997, 639.997, 640, 400]
   resolution: [1280, 800]
-  rostopic: /vio/right/image_raw
+  rostopic: /image:=/world/default/model/x500_stereo_vio_0/link/vio_sensor_link/sensor/left_camera/image
+  timeshift_cam_imu: [0.0]
