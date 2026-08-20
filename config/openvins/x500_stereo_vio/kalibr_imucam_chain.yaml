@@ -1,0 +1,25 @@
+
+
+cam0: #left camera
+  T_imu_cam:
+    #unsure
+
+  cam_overlaps: [1]
+  camera_model: pinhole
+  distortion_coeffs: #unsure
+  distortion_model: radtan
+  intrincics: [639.997, 639.997, 640, 400]
+  resolution: [1280, 800]
+  rostopic: /vio/left/image_raw
+
+cam1: #right camera
+  T_imu_cam:
+    #unsure
+
+  cam_overlaps: [0]
+  camera_model: pinhole
+  distortion_coeffs: #unsure
+  distortion_model: radtan
+  intrincics: [639.997, 639.997, 640, 400]
+  resolution: [1280, 800]
+  rostopic: /vio/right/image_raw

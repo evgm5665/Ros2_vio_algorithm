@@ -1,6 +1,8 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
+#reps the position of the module sensor relative to the drone
+#taken from the OakD-Lite sensor module
 
 def generate_launch_description():
     return LaunchDescription([
@@ -20,6 +22,10 @@ def generate_launch_description():
             ],
         ),
 
+
+#reps actual position of the IMU relative to the module, they are the 
+# same as they are at same position
+
         Node(
             package="tf2_ros",
             executable="static_transform_publisher",
@@ -35,6 +41,8 @@ def generate_launch_description():
                 "--child-frame-id", "camera_imu_frame",
             ],
         ),
+
+#reps actual position of the camera sensor relative to module
 
         Node(
             package="tf2_ros",
@@ -68,6 +76,9 @@ def generate_launch_description():
             ],
         ),
 
+
+
+#reps the optical coordinate frame relative to the gazebo sensor frame
         Node(
             package="tf2_ros",
             executable="static_transform_publisher",
