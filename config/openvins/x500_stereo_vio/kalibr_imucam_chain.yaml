@@ -1,34 +1,34 @@
-%YAML: 1.0
-#TODO- fix syntax no[] for the non matrix values
+%YAML:1.0
+
 
 cam0: #left camera
   T_imu_cam:
-    -[ 0, 0, 1,   0]
-    -[-1, 0, 0, +0.04]
-    -[0, -1, 0,   0]
-    -[ 0, 0, 0,   1]
+    - [ 0, 0, 1,   0]
+    - [-1, 0, 0, 0.04]
+    - [0, -1, 0,   0]
+    - [ 0, 0, 0,   1]
 
   cam_overlaps: [1]
   camera_model: pinhole
-  distortion_coeffs: [0]
+  distortion_coeffs: [0.0, 0.0, 0.0, 0.0]
   distortion_model: radtan
-  intrincics: [639.997, 639.997, 640, 400]
+  intrinsics: [639.9976348876953, 639.9976253509521, 640.0, 400.0]
   resolution: [1280, 800]
-  rostopic: /image:=/world/default/model/x500_stereo_vio_0/link/vio_sensor_link/sensor/right_camera/image
-  timeshift_cam_imu: [0.0]
+  rostopic: /vio/left/image_raw
+  timeshift_cam_imu: 0.0
 
 
 cam1: #right camera
   T_imu_cam:
-    -[0, 0, 1,    0]
-    -[-1, 0, 0, -0.04]
-    -[0, -1, 0,   0]
-    -[0, 0, 0,    1]
+    - [0, 0, 1,    0]
+    - [-1, 0, 0, -0.04]
+    - [0, -1, 0,   0]
+    - [0, 0, 0,    1]
   cam_overlaps: [0]
   camera_model: pinhole
-  distortion_coeffs: [0]
+  distortion_coeffs: [0.0, 0.0, 0.0, 0.0]
   distortion_model: radtan
-  intrincics: [639.997, 639.997, 640, 400]
+  intrinsics: [639.9976348876953, 639.9976253509521, 640.0, 400.0]
   resolution: [1280, 800]
-  rostopic: /image:=/world/default/model/x500_stereo_vio_0/link/vio_sensor_link/sensor/left_camera/image
-  timeshift_cam_imu: [0.0]
+  rostopic: /vio/right/image_raw
+  timeshift_cam_imu: 0.0
