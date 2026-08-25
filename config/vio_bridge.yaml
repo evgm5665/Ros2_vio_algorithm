@@ -1,33 +1,33 @@
 - ros_topic_name: "/vio/left/image_raw"
-  gz_topic_name: "/world/default/model/x500_stereo_vio_0/link/vio_sensor_link/sensor/left_camera/image"
+  gz_topic_name: "/world/baylands/model/x500_stereo_vio_0/link/vio_sensor_link/sensor/left_camera/image"
   ros_type_name: "sensor_msgs/msg/Image"
   gz_type_name: "gz.msgs.Image"
   direction: GZ_TO_ROS
   lazy: false
 
 - ros_topic_name: "/vio/left/camera_info"
-  gz_topic_name: "/world/default/model/x500_stereo_vio_0/link/vio_sensor_link/sensor/left_camera/camera_info"
+  gz_topic_name: "/world/baylands/model/x500_stereo_vio_0/link/vio_sensor_link/sensor/left_camera/camera_info"
   ros_type_name: "sensor_msgs/msg/CameraInfo"
   gz_type_name: "gz.msgs.CameraInfo"
   direction: GZ_TO_ROS
   lazy: false
 
 - ros_topic_name: "/vio/right/image_raw"
-  gz_topic_name: "/world/default/model/x500_stereo_vio_0/link/vio_sensor_link/sensor/right_camera/image"
+  gz_topic_name: "/world/baylands/model/x500_stereo_vio_0/link/vio_sensor_link/sensor/right_camera/image"
   ros_type_name: "sensor_msgs/msg/Image"
   gz_type_name: "gz.msgs.Image"
   direction: GZ_TO_ROS
   lazy: false
 
 - ros_topic_name: "/vio/right/camera_info"
-  gz_topic_name: "/world/default/model/x500_stereo_vio_0/link/vio_sensor_link/sensor/right_camera/camera_info"
+  gz_topic_name: "/world/baylands/model/x500_stereo_vio_0/link/vio_sensor_link/sensor/right_camera/camera_info"
   ros_type_name: "sensor_msgs/msg/CameraInfo"
   gz_type_name: "gz.msgs.CameraInfo"
   direction: GZ_TO_ROS
   lazy: false
 
 - ros_topic_name: "/vio/imu"
-  gz_topic_name: "/world/default/model/x500_stereo_vio_0/link/vio_sensor_link/sensor/camera_imu/imu"
+  gz_topic_name: "/world/baylands/model/x500_stereo_vio_0/link/vio_sensor_link/sensor/camera_imu/imu"
   ros_type_name: "sensor_msgs/msg/Imu"
   gz_type_name: "gz.msgs.IMU"
   direction: GZ_TO_ROS
