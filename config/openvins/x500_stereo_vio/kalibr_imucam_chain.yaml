@@ -3,32 +3,32 @@
 
 cam0: #left camera
   T_imu_cam:
-    - [ 0, 0, 1,   0]
-    - [-1, 0, 0, 0.04]
-    - [0, -1, 0,   0]
+    - [ 0.006,0.005,1.000,-0.004]
+    - [-1.000,-0.004,0.006,0.002]
+    - [0.005,-1.000,0.005,-0.007]
     - [ 0, 0, 0,   1]
 
   cam_overlaps: [1]
   camera_model: pinhole
-  distortion_coeffs: [0.0, 0.0, 0.0, 0.0]
+  distortion_coeffs: [-0.00197,0.00083,-0.00054,0.00060]
   distortion_model: radtan
-  intrinsics: [639.9976348876953, 639.9976253509521, 640.0, 400.0]
+  intrinsics: [642.708,642.475,642.047,398.402]
   resolution: [1280, 800]
   rostopic: /vio/left/image_raw
-  timeshift_cam_imu: 0.0
+  timeshift_cam_imu: 0.00211
 
 
 cam1: #right camera
   T_imu_cam:
-    - [0, 0, 1,    0]
-    - [-1, 0, 0, -0.04]
-    - [0, -1, 0,   0]
+    - [0.006,0.005,1.000,-0.006]
+    - [-1.000,-0.005,0.006,-0.078]
+    - [0.005,-1.000,0.005,-0.006]
     - [0, 0, 0,    1]
   cam_overlaps: [0]
   camera_model: pinhole
-  distortion_coeffs: [0.0, 0.0, 0.0, 0.0]
+  distortion_coeffs: [-0.00166,0.00075,-0.00061,0.00076]
   distortion_model: radtan
-  intrinsics: [639.9976348876953, 639.9976253509521, 640.0, 400.0]
+  intrinsics: [642.592,642.309,642.451,397.990]
   resolution: [1280, 800]
   rostopic: /vio/right/image_raw
-  timeshift_cam_imu: 0.0
+  timeshift_cam_imu: 0.00211

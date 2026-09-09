@@ -11,8 +11,8 @@ install(
 )
 
 install(
-  PROGRAMS
-    scripts/stereo_timing_check.py
+  Programs
+    scripts/liveOvioConv.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
