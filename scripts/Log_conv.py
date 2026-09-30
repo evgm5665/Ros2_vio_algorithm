@@ -3,7 +3,7 @@ import pandas as pa
 import pathlib as Path
 import csv
 import re
-
+#DRAFT Template 
 #script converts the log files to csv files for easier analysis
 
 GTLogPath = "/home/usl/Ovio_ws/src/vio_alg/Bag_log/GroundTruthLogs/"

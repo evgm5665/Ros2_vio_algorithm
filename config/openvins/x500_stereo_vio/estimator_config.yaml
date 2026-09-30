@@ -1,5 +1,8 @@
 %YAML:1.0 # need to specify the file type at the top!
 
+#sets estimator behavior
+
+
 verbosity: "INFO" # ALL, DEBUG, INFO, WARNING, ERROR, SILENT
 
 use_fej: true # if first-estimate Jacobians should be used (enable for good consistency)
@@ -63,14 +66,14 @@ init_dyn_bias_a: [ 0.0, 0.0, 0.0 ] # initial accelerometer bias guess
 # ==================================================================
 
 record_timing_information: true # if we want to record timing information of the method
-record_timing_filepath: "/tmp/traj_timing.txt" # https://docs.openvins.com/eval-timing.html#eval-ov-timing-flame
+record_timing_filepath: "/home/usl/Ovio_ws/src/vio_alg/Flight_log/OpenVIns/tmp/traj_timing.txt" # https://docs.openvins.com/eval-timing.html#eval-ov-timing-flame
 
 # if we want to save the simulation state and its diagional covariance
 # use this with rosrun ov_eval error_simulation
-save_total_state: true
-filepath_est: "/tmp/ov_estimate.txt"
-filepath_std: "/tmp/ov_estimate_std.txt"
-filepath_gt: "/tmp/ov_groundtruth.txt"
+save_total_state: false
+filepath_est: "/home/usl/Ovio_ws/src/vio_alg/Flight_log/OpenVIns/tmp1/ov_estimate.txt"
+filepath_std: "/home/usl/Ovio_ws/src/vio_alg/Flight_log/OpenVIns/tmp1/ov_estimate_std.txt"
+filepath_gt: "/home/usl/Ovio_ws/src/vio_alg/Flight_log/GT/tmp1/ov_groundtruth.txt"
 
 # ==================================================================
 # ==================================================================

@@ -1,3 +1,5 @@
+# Gz to ros bridge: publish camera, imu, clock, ground truth in ros
+
 - ros_topic_name: "/vio/left/image_raw"
   gz_topic_name: "/world/baylands/model/x500_stereo_vio_0/link/vio_sensor_link/sensor/left_camera/image"
   ros_type_name: "sensor_msgs/msg/Image"

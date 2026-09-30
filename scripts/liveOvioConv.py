@@ -9,6 +9,8 @@ from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from rclpy.node import Node
 
+#subscribes to OpenVINS imu pose then publishes the estimated baselink pose as /vio.pose_base
+#changes the point on the drone being reported
 
 # Helper function for rotating a vector with a quaternion
 

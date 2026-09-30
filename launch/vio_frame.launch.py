@@ -1,6 +1,7 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
-
+#TREE
+#sensor geometry: relationships between baselink and moodule imu and cameras
 #reps the position of the module sensor relative to the drone
 #taken from the OakD-Lite sensor module
 
