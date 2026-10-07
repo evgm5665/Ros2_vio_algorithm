@@ -56,23 +56,30 @@ def rotate_covariance(C, R):
 
 
     #input 
-    C = np.array(C).reshape((3, 3))
-    R = np.array(R).reshape((3, 3))
+    C = np.array(C, dtype = float)
+    R = np.array(R, dtype = float)
 
-    C_rotated = R @ C @ R.T
-
-    if len(C.shape) != 9:
+    if C.size != 9:
         raise ValueError("C is not a 3x3 matrix")
-    if len(R.shape) != 9:
+    if R.size != 9:
         raise ValueError("R is not a 3x3 matrix")
-        
-    else:
-        CS_rotated = 1/2 * (C_rotated + C_rotated.T)  # Ensure symmetry
 
+    
+
+    if not np.all(np.isfinite(C)):
+        raise ValueError("C does not have any finite values")
+    if not np.all(np.isfinite(R)):
+        raise ValueError("R does not have any finite values")
     if not np.allclose(CS_rotated, C_rotated.T):
         raise ValueError("Covariance matrix is not symmetric")
     
-    return (CS_rotated) 
+    C_rotated = R @ C @ R.T
+
+    C_rotated = 0.5 * (C_rotated + C_rotated.T)  # Ensure symmetry
+    if np.array(np.diag(C_rotated) < -1.0e-12):
+        raise ValueError("Rotated conv contatains a negative variance")
+    
+    return (C_rotated) 
 
     
 
@@ -195,12 +202,13 @@ class SPNode(Node):
         #subscriptions
 
         #subscribe to /ov_msckf/odomimu
-        self.subscriber = self.create_subscription(
+        self.openvins_subscription = self.create_subscription(
             Odometry,
             self.openvins_topic,
             self.openvins_callback,
             10
         )
+
         self.gazebo_subscription = self.create_subscription(
                     Odometry,
                     self.gazebo_topic,
@@ -209,7 +217,7 @@ class SPNode(Node):
                 )
         
         #publish to /fmu/in/vehicle_visual_odometry
-        self.publisher = self.create_publisher(
+        self.px4_publisher = self.create_publisher(
             VehicleOdometry,
             self.px4_topic,
             10
@@ -232,26 +240,28 @@ class SPNode(Node):
 
 
     def openvins_callback(self, msg):
-        self.source == "openvins"
         if self.source != "openvins":
             return
-        elif self.source == "openvins":
-            self.latest_openvins_msg = msg
-            return self.openvins_message_pending == True
+        
+        self.latest_openvins_msg = msg
+        self.openvins_message_pending = True
             
         
 
     def gazebo_callback(self, msg):
-        self.source == "gazebo_test"
         if self.source != "gazebo_test":
             return
-        if self.source == "gazebo_test":
-            self.latest_gazebo_msg = msg
-            return self.gazebo_message_pending == True
+        
+        self.latest_gazebo_msg = msg
+        return self.gazebo_message_pending = True
 
     def publish_latest_measurement(self):
-        if self.source is not True:
-            return
+        if self.source == "openvins":
+            if not self.openvins_messgae_pending:
+                return
+
+            msg = self.latest_openvins_msg
+            self.
         
 
         # using msg.pose.covariance and msg.twist.covariance
