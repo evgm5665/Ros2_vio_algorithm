@@ -1,0 +1,535 @@
+Fix the existing skeleton before adding conversion logic:
+- Change Gazebo’s default topic to /ground_truth/odometry.
+- Initialize previous_output_quaternion = None.
+- Use publish_rate_hz consistently.
+- Rename the matrix to R_ned_enu.
+- Standardize frame modes as local_frd and ned.
+- Make rotate_covariance(C, R) operate on one 3×3 matrix using:
+  R @ C @ R.T, followed by symmetrization.
+
+Implement only the message-ingestion layer:
+- Add openvins_callback(msg).
+- Add gazebo_callback(msg).
+- Each callback should store the latest message and set its pending flag.
+- Ensure an inactive source’s callback cannot affect publication.
+- Remove or rename the obsolete pose_callback.
+
+Implement the first part of publish_latest_measurement():
+- Select the configured source.
+- Return when no new sample is pending.
+- Extract the pose, twist, header timestamp, and both 6×6 covariance matrices.
+- Convert the sample timestamp to integer microseconds.
+- Detect zero, duplicate, backward, stale, and non-finite samples.
+- Do not construct or publish VehicleOdometry yet.
+
+Unit-test the math helpers independently:
+- Quaternion normalization, including zero/invalid inputs.
+- Hamilton multiplication and identity.
+- Quaternion-to-matrix orthogonality and determinant +1.
+- Vector rotation.
+- Covariance rotation and symmetry.
+- Verify ENU diag(1,2,3) becomes NED diag(2,1,3).
+
+Implement local_frd first:
+- Define explicitly how its origin and initial yaw are established.
+- Transform position into that local world frame.
+- Apply the body FLU-to-FRD conversion to orientation.
+- Convert linear and angular body velocities with (x, -y, -z).
+- Rotate the three covariance blocks.
+- Enforce quaternion sign continuity.
+- Keep ned rejected while alignment_valid == False.
+This alignment definition is the most important unresolved design item. Do not simply label unaligned OpenVINS coordinates as FRD or NED.
+
+Construct and validate VehicleOdometry:
+- Fill all required fields from your notes.
+- Use the sample time for timestamp_sample.
+- Use a current compatible clock for timestamp.
+- Set POSE_FRAME_FRD and VELOCITY_FRAME_BODY_FRD.
+- Use covariance diagonals only.
+- Set quality = 0 until you have a real quality measure.
+- Publish only after checking finiteness, quaternion norm, variances, and timestamps.
+- Update the accepted timestamp/quaternion and clear the pending flag only after acceptance.
+
+Add reset handling:
+- Increment reset_counter on VIO reinitialization, origin/alignment changes, or backward simulation time.
+- Reset timestamp and quaternion-continuity state deliberately.
+- Avoid treating a reset as an ordinary sample rejection forever.
+
+Add the Gazebo path:
+- Convert the base_link pose to the synthetic sensor pose using
+  p_world_sensor = p_world_base + R_world_base @ [0.12, 0.03, 0.242].
+- Then perform ENU/FLU → NED/FRD conversion.
+- Verify this path separately from OpenVINS.
+- Never allow both sources to publish simultaneously.
+
+Finish ROS packaging:
+- Add the main() entry point.
+- Declare dependencies in package.xml.
+- Install the script through CMakeLists.txt.
+- Make it executable.
+- Rebuild and source the workspace.
+- Confirm px4_msgs matches your PX4 version.
+
+Validate before enabling EKF2 fusion:
+- Start with Gazebo and use_sim_time=true.
+- Check topic types, rate, timestamps, quaternion norm, axes, and covariance.
+- Test one translation and one rotation axis at a time.
+- Inspect PX4’s received vehicle_visual_odometry.
+- Then test OpenVINS without fusion.
+- Enable position fusion first, velocity second, and yaw only after establishing a genuine global-to-NED yaw alignment.
+
+
+NEW:
+
+You’re closer than it feels. Your math helpers are mostly in reasonable shape, but the node cannot run yet because initialization, callbacks, and timer processing are unfinished.
+
+STAGE 1: MAKE THE NODE START
+
+These issues currently cause syntax or runtime errors.
+
+1. Finish or temporarily stub every method.
+
+gazebo_callback() has no body, which is a Python syntax error. You also reference publish_latest_measurement, but it does not exist.
+
+The class needs these methods:
+
+def openvins_callback(self, msg):
+    pass
+
+def gazebo_callback(self, msg):
+    pass
+
+def publish_latest_measurement(self):
+    pass
+
+Notice that callbacks require self. Your current versions only accept msg.
+
+You can temporarily use pass while getting initialization working.
+
+2. Use one parameter name consistently.
+
+You declare:
+
+self.declare_parameter("publish_rate", 50.0)
+
+but retrieve:
+
+self.get_parameter("publish_rate_hz")
+
+Choose one name everywhere. I recommend publish_rate_hz.
+
+The same spelling should appear in:
+
+- declare_parameter
+- get_parameter
+- the instance attribute
+- validation
+- timer calculation
+- startup log
+
+Your code currently also mixes:
+
+- self.publisher_rate_hz
+- self.publish_rate_hz
+- self.publisher_rate
+
+Those should all become one attribute:
+
+self.publish_rate_hz
+
+Otherwise you will get an AttributeError.
+
+3. Standardize frame-mode strings.
+
+You currently use:
+
+local frd
+global ned
+
+Use the planned strings instead:
+
+local_frd
+ned
+
+Update both the default value and parameter validation.
+
+4. Add the ROS entry point.
+
+After the class, the script needs a function that:
+
+1. Calls rclpy.init().
+2. Constructs SPNode.
+3. Calls rclpy.spin(node).
+4. Destroys the node.
+5. Calls rclpy.shutdown().
+
+Then call that function under:
+
+if __name__ == "__main__":
+
+At the end of Stage 1, run only a syntax check and then start the node. The goal is simply: the node starts, prints its startup message, and remains alive without exceptions.
+
+
+STAGE 2: MAKE THE CALLBACKS STORE MESSAGES
+
+The callbacks should not extract covariance or perform conversions yet.
+
+OpenVINS callback behavior:
+
+1. Check whether self.source == "openvins".
+2. If not, return immediately.
+3. Store msg in self.latest_openvins_msg.
+4. Set self.openvins_message_pending = True.
+
+Conceptually:
+
+if OpenVINS is not selected:
+    return
+
+latest OpenVINS message = msg
+OpenVINS message pending = true
+
+Gazebo callback behavior:
+
+Do the equivalent operation for gazebo_test:
+
+if Gazebo is not selected:
+    return
+
+latest Gazebo message = msg
+Gazebo message pending = true
+
+You do not need these lines in the callbacks:
+
+pose_cov = msg.pose.covariance
+twist_conv = msg.twist.covariance
+
+That extraction belongs in the timer method.
+
+At the end of Stage 2, temporarily add throttled logging or inspect topic statistics to prove that only the selected source updates its stored message.
+
+
+STAGE 3: MAKE THE TIMER SELECT ONE MESSAGE
+
+Start publish_latest_measurement() with source selection only.
+
+The logic should be:
+
+if source is openvins:
+    if there is no stored OpenVINS message or nothing is pending:
+        return
+    selected message = latest OpenVINS message
+
+else if source is gazebo_test:
+    if there is no stored Gazebo message or nothing is pending:
+        return
+    selected message = latest Gazebo message
+
+Do not publish yet.
+
+Keep track of which pending flag belongs to the selected sample. You will clear that flag after processing. Since you are currently using a single-threaded rclpy.spin, callback and timer access is serialized. If you later use a multithreaded executor, this shared state will need synchronization.
+
+A timer at 50 Hz does not guarantee 50 published samples per second. Because you only process new samples, the actual output rate is at most:
+
+min(input rate, 50 Hz)
+
+That is the correct behavior for avoiding duplicate measurements.
+
+
+STAGE 4: EXTRACT AND VALIDATE THE TIMESTAMP
+
+From the selected Odometry message, compute:
+
+sample_timestamp_us =
+    msg.header.stamp.sec × 1,000,000
+    + msg.header.stamp.nanosec // 1,000
+
+Use integer division for nanoseconds-to-microseconds.
+
+Reject the sample if:
+
+- sample_timestamp_us <= 0
+- it equals the previous accepted timestamp
+- it is older than the previous accepted timestamp
+- its age exceeds stale_timeout
+- any required numeric input is NaN or infinity
+
+Important clock rule:
+
+Staleness only makes sense if the current node clock and message timestamp use the same clock domain.
+
+For Gazebo:
+
+- Start the node with use_sim_time=true.
+- Compare the message stamp against self.get_clock().now().
+
+Do not compare a simulation timestamp directly with the computer’s wall clock.
+
+A backward timestamp during simulation may indicate the simulator reset. That should eventually increment reset_counter and reset time-dependent state rather than permanently rejecting every subsequent sample.
+
+
+STAGE 5: EXTRACT THE MESSAGE CONTENTS AND COVARIANCE
+
+Once the timestamp passes validation, extract:
+
+pose = msg.pose.pose
+twist = msg.twist.twist
+
+Then reshape the covariance arrays:
+
+C_pose = pose covariance reshaped to 6×6
+C_twist = twist covariance reshaped to 6×6
+
+Extract only these blocks:
+
+C_position = C_pose[0:3, 0:3]
+C_orientation = C_pose[3:6, 3:6]
+C_velocity = C_twist[0:3, 0:3]
+
+You currently do not need:
+
+- position-orientation cross covariance
+- orientation-position cross covariance
+- angular-velocity covariance
+
+VehicleOdometry has no fields for those full matrices.
+
+Before using covariance, verify its values are finite. You also need to decide how to handle ROS’s “unknown covariance” convention, commonly a negative first diagonal element. Do not publish a negative value as a PX4 variance. A safe initial policy is to reject the sample or replace unavailable variance fields with PX4’s expected unknown-value representation after confirming the exact px4_msgs version you use.
+
+
+STAGE 6: TEST THE HELPERS BEFORE USING THEM
+
+Your helpers are mostly sensible, with a few refinements.
+
+normalize_quaternion:
+
+The basic calculation is correct. Add rejection for non-finite input or a non-finite norm.
+
+Test:
+
+normalize(1, 0, 0, 0) → (1, 0, 0, 0)
+normalize(2, 0, 0, 0) → (1, 0, 0, 0)
+zero quaternion → ValueError
+
+multiply_quaternions:
+
+Your Hamilton-product equations are correct for internal order (w,x,y,z).
+
+Test both identity directions:
+
+identity × q = q
+q × identity = q
+
+Remember that multiplication order matters.
+
+quaternion_to_rotation_matrix:
+
+The matrix formula looks correct.
+
+For numerical checks, use explicit tolerances with np.allclose and np.isclose because valid floating-point results will not be exact.
+
+Test:
+
+- Identity quaternion produces the identity matrix.
+- R @ R.T is approximately identity.
+- det(R) is approximately +1.
+
+rotate_vector:
+
+The implementation is the common optimized quaternion-vector rotation and appears correct.
+
+Your comment “square root the quats” is misleading—you are squaring quaternion components. Correcting the comment later will make the function easier to review.
+
+Check that its result matches:
+
+quaternion_to_rotation_matrix(q) @ vector
+
+for several test cases.
+
+rotate_covariance:
+
+The operation is correct:
+
+C_rotated = R @ C @ R.T
+C_rotated = 0.5 * (C_rotated + C_rotated.T)
+
+The symmetry test after explicit symmetrization will nearly always pass, so more useful validation would happen before the calculation:
+
+- C has shape 3×3.
+- R has shape 3×3.
+- All elements are finite.
+- Input covariance is approximately symmetric.
+- R is a valid rotation matrix.
+
+Also test:
+
+R_ned_enu @ diag(1,2,3) @ R_ned_enu.T
+    → diag(2,1,3)
+
+
+STAGE 7: RESOLVE THE MEANING OF LOCAL_FRD
+
+This is the largest conceptual gap in the instructions.
+
+There are two different things called “FRD”:
+
+- Body FRD: axes attached to the vehicle.
+- Local FRD world frame: a fixed local world frame whose initial horizontal heading defines its X/Y axes.
+
+Do not apply R_frd_flu blindly to every quantity. The transformation depends on what frame the input quantity is expressed in.
+
+You need to confirm these facts from the actual OpenVINS message:
+
+- What does header.frame_id contain?
+- What does child_frame_id contain?
+- Is position expressed in the OpenVINS global frame?
+- Is twist.linear expressed in the child/body frame or global frame?
+- Is OpenVINS’s body convention FLU?
+- What orientation does the quaternion represent—body in world or world in body?
+
+For standard nav_msgs/Odometry semantics:
+
+- Pose is expressed in header.frame_id.
+- Twist is expressed in child_frame_id.
+- The quaternion normally represents the child frame’s orientation in the header/world frame.
+
+But verify OpenVINS follows those semantics before implementing the multiplication order.
+
+A practical definition for local FRD:
+
+When the first valid OpenVINS sample arrives:
+
+1. Save its position as the local origin.
+2. Extract or otherwise establish the initial heading.
+3. Build a fixed rotation from OpenVINS world coordinates into your local FRD world coordinates.
+4. Save that rotation and translation.
+5. Set alignment_valid = True.
+6. Increment reset_counter when this origin is later re-established.
+
+Then position conversion has the conceptual form:
+
+p_output = R_output_openvins × (p_openvins - p_origin)
+
+Do not set alignment_valid=True until you have clearly defined and tested this transformation.
+
+For now, implement only local_frd. If frame_mode == "ned", log an error or warning and refuse publication. True NED requires an external or global alignment that arbitrary-yaw OpenVINS does not provide.
+
+
+STAGE 8: HANDLE ORIENTATION CAREFULLY
+
+Orientation needs transformations on both sides:
+
+output-world ← OpenVINS-world
+
+and:
+
+ROS body FLU → PX4 body FRD
+
+You cannot safely choose the quaternion multiplication order until you write down what every quaternion means. Use notation such as:
+
+q_A_B = orientation of frame B expressed in frame A
+
+Then derive the chain using matching frame labels. This prevents the most common error: using the right fixed rotations in the wrong multiplication order.
+
+After calculating the output quaternion:
+
+1. Normalize it.
+2. Compare it with the previous output quaternion using the dot product.
+3. If the dot product is negative, negate all four components.
+4. Store it in PX4 order [w,x,y,z].
+
+Negating a quaternion does not change its rotation; it only maintains a continuous numerical representation.
+
+
+STAGE 9: CONVERT VELOCITIES ONLY AFTER CONFIRMING THEIR INPUT FRAME
+
+If OpenVINS’s twist.linear and twist.angular are body-FLU quantities, convert both as:
+
+x_frd = x_flu
+y_frd = -y_flu
+z_frd = -z_flu
+
+Then use:
+
+velocity_frame = VELOCITY_FRAME_BODY_FRD
+
+However, if OpenVINS supplies velocity in its global frame, this conversion is wrong. Global velocity would need the world-frame rotation and a corresponding PX4 velocity-frame constant. Confirm this from the topic documentation or by moving the vehicle with a known orientation.
+
+The velocity covariance must use the same rotation as the velocity itself. Therefore:
+
+- Body-FLU velocity → use R_frd_flu.
+- World-frame velocity → use the applicable world-frame rotation.
+
+Your continuation instructions assume body-FLU velocity, but this is important enough to verify rather than assume.
+
+
+STAGE 10: BUILD VEHICLEODOMETRY
+
+Only after the transformations are proven should you construct the output message.
+
+Populate:
+
+- timestamp
+- timestamp_sample
+- pose_frame
+- position
+- q
+- velocity_frame
+- velocity
+- angular_velocity
+- position_variance
+- orientation_variance
+- velocity_variance
+- reset_counter
+- quality
+
+Use the constants from the installed VehicleOdometry class rather than unexplained numeric literals.
+
+Before publishing, verify:
+
+- Every vector has the expected length.
+- Every numeric value is finite.
+- Quaternion norm is approximately one.
+- Variances are valid and nonnegative, unless your PX4 message version defines a specific unknown representation.
+- timestamp_sample is increasing.
+- ned has not slipped through without valid alignment.
+
+Only after successful publication should you:
+
+- Save previous_sample_timestamp_us.
+- Save previous_output_quaternion.
+- Clear the selected pending flag.
+
+For a malformed sample, you should usually clear or quarantine that pending sample after reporting it. Otherwise the timer will retry the same bad message and log the same failure 50 times per second.
+
+
+STAGE 11: ADD GAZEBO AFTER OPENVINS STRUCTURE WORKS
+
+Gazebo supplies the base pose, but you want to emulate the camera or IMU sensor reference point.
+
+Use the body-FLU offset:
+
+p_base_sensor_flu = [0.12, 0.03, 0.242]
+
+Then compute:
+
+p_world_sensor =
+    p_world_base
+    + R_world_base × p_base_sensor_flu
+
+This multiplication is essential because the offset rotates with the vehicle.
+
+After constructing the synthetic sensor pose, convert it from ENU/FLU into the desired PX4 frames. Do not subtract the offset again in PX4 or the converter; PX4’s configured external-vision offset handles the sensor-to-body correction.
+
+
+YOUR IMMEDIATE STOPPING POINT
+
+For your next coding session, do only these five tasks:
+
+1. Fix the publication-rate parameter and attribute names.
+2. Change frame strings to local_frd and ned.
+3. Give both callbacks self and implement message storage and pending flags.
+4. Add a stub publish_latest_measurement(self).
+5. Add the ROS main() entry point.
+
+Then verify that the node launches and receives the selected topic. Do not implement quaternion frame conversion until that basic message path works.
