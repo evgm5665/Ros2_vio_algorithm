@@ -60,11 +60,19 @@ def rotate_covariance(C, R):
     R = np.array(R).reshape((3, 3))
 
     C_rotated = R @ C @ R.T
-    C_rotated = 1/2 * (C_rotated + C_rotated.T)  # Ensure symmetry
 
-    if not np.allclose(C_rotated, C_rotated.T):
+    if len(C.shape) != 9:
+        raise ValueError("C is not a 3x3 matrix")
+    if len(R.shape) != 9:
+        raise ValueError("R is not a 3x3 matrix")
+        
+    else:
+        CS_rotated = 1/2 * (C_rotated + C_rotated.T)  # Ensure symmetry
+
+    if not np.allclose(CS_rotated, C_rotated.T):
         raise ValueError("Covariance matrix is not symmetric")
-    return (C_rotated) 
+    
+    return (CS_rotated) 
 
     
 
@@ -136,7 +144,7 @@ class SPNode(Node):
         self.px4_topic = str(self.get_parameter("px4_topic").value)
         self.source = str(self.get_parameter("source").value)
         self.frame_mode = str(self.get_parameter("frame_mode").value)
-        self.publisher_rate_hz = float(self.get_parameter("publish_rate_hz").value)
+        self.publish_rate_hz = float(self.get_parameter("publish_rate_hz").value)
         self.stale_timeout = float(self.get_parameter("stale_timeout").value)
 
         #validation of parameters
@@ -144,7 +152,7 @@ class SPNode(Node):
             raise ValueError("Invalid source parameter. Must be 'openvins' or 'gazebo_test'.")  
         if self.frame_mode not in ["local_frd", "ned"]:
             raise ValueError("Invalid frame_mode parameter. Must be 'local_frd' or 'ned'.")  
-        if self.publisher_rate <= 0:
+        if self.publish_rate_hz <= 0:
             raise ValueError("Invalid publish_rate_hz parameter. Must be a positive number.")  
         if self.stale_timeout <= 0:
             raise ValueError("Invalid stale_timeout parameter. Must be a positive number.")
@@ -176,7 +184,7 @@ class SPNode(Node):
         self.latest_gazebo_msg = None
 
         #true only when a new message arived since last publication attempt
-        self.openvins_message_pending = True
+        self.openvins_message_pending = False
         self.gazebo_message_pending = False
 
         #output cont and rest state
@@ -223,28 +231,75 @@ class SPNode(Node):
 
 
 
-def pose_callback(self, msg):
-    #extract position and orientation
-    pose = msg.pose.pose
-    position = pose.position
-    orientation = pose.orientation
+    def openvins_callback(self, msg):
+        self.source == "openvins"
+        if self.source != "openvins":
+            return
+        elif self.source == "openvins":
+            self.latest_openvins_msg = msg
+            return self.openvins_message_pending == True
+            
+        
 
-def openvins_callback(self, msg):
-    self.source == "openvins"
-    if self.source != "openvins":
-        return
-    self.latest_openvins_msg = msg
-    
+    def gazebo_callback(self, msg):
+        self.source == "gazebo_test"
+        if self.source != "gazebo_test":
+            return
+        if self.source == "gazebo_test":
+            self.latest_gazebo_msg = msg
+            return self.gazebo_message_pending == True
 
-def gazebo_callback(self, msg):
-    self.source == "gazebo_test"
-    if self.source != "gazebo_test":
-        return
-    self.latest_gazebo_msg = msg
+    def publish_latest_measurement(self):
+        if self.source is not True:
+            return
+        
 
-def publish_latest_measurement(self):
-    if self.source is openvins_callback:
-        if not msg or self.
+        # using msg.pose.covariance and msg.twist.covariance
+        # both output [x, y, z rotation x, rotation, y, rotation z] in a 6x6 matrix  with float64[36] cov
+        
+        C_pose = msg.pose.pose
+        C_twist = msg.twist.twist
+
+        CM_pose = C_pose.reshape(6,6)
+        CM_twist = C_twist.reshape(6,6)
+
+        #assigning the pose covariance matrix to the appropriate variables
+        c_position = CM_pose[:3, :3]
+        c_orientation = CM_pose[3:6, 3:6]
+        # c_position_orientation = CM_pose[:3, 3:6]
+        # c_orientation_position = CM_pose[3:6, :3]
+
+        #assigning the twist covariance matrix to the appropriate variables
+        c_velocity = CM_twist[:3, :3]
+        c_angular = CM_twist[3:6, 3:6]
+
+        #TODO implement error: diagnol, finite numbers, etc. 
+
+        #convert sample timestmamp to int ms
+        sample_timestamp_us = msg.header.stamp.sec * 1,000,000 + msg.header.stamp.nanosec // 1,000
+
+        #sample errors
+        if sample_timestamp_us <= 0:
+            raise ValueError("Sample timestamp is <= 0")
+            return
+        elif sample_timestamp_us == self.previous_sample_timestamp_us:
+            raise ValueError("Sample timestamp repeats")
+            return
+        elif sample_timestamp_us < self.previous_sample_timestamp_us:
+            raise ValueError("timing error: sample time is less than previous timestamp")
+            return
+        elif sample_timestamp_us > self.stale_timeout:
+            raise ValueError("invalid sample timestamp")
+            return
+        elif sample_timestamp_us == None:
+            raise ValueError("No sample timestamp recieved")
+            return
+
+        #
+
+        
+        
+            
 
 
 def main(args = None):
@@ -257,7 +312,7 @@ def main(args = None):
     except KeyboardInterrupt:
         pass
     finally:
-        node.detroy_node()
+        node.destroy_node()
         rclpy.shutdown()
 
 if __name__ == "__main__":
