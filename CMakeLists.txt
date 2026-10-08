@@ -10,9 +10,15 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
+# install(
+#   Programs
+#     scripts/liveOvioConv.py
+#   DESTINATION lib/${PROJECT_NAME}
+# )
+
 install(
-  Programs
-    scripts/liveOvioConv.py
+  PROGRAMS
+    scripts/px4_conv.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
