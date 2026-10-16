@@ -55,8 +55,10 @@ def rotate_covariance(C, R):
         raise ValueError("C contains a non-finite value")
     if not np.all(np.isfinite(R)):
         raise ValueError("R contains a non-finite value")
-    if not np.allclose(C, C.T, atol=1.0e-9):
-        raise ValueError("Covariance matrix is not symmetric")
+    if not np.allclose(C, C.T, rtol=1.0e-5, atol=1.0e-7):
+        max_asymmetry = float(np.max(np.abs(C - C.T)))
+        raise ValueError(f"Covariance matrix asymmetry is too larg: {max_asymmetry:.3e}")
+    C = 0.5 * (C + C.T)
     if not np.allclose(R @ R.T, np.identity(3), atol=1.0e-6):
         raise ValueError("Rotation matrix is not orthogonal")
     if not np.isclose(np.linalg.det(R), 1.0, atol=1.0e-6):
@@ -296,10 +298,15 @@ class SPNode(Node):
         now_us = self.get_clock().now().nanoseconds // 1_000
         message_age_us = now_us - sample_timestamp_us
         stale_timeout_us = int(self.stale_timeout * 1_000_000)
+        future_tolerance_us = 20_000
+
+        if message_age_us < -future_tolerance_us:
+            self.get_logger().warning(f"Measurement timestamp is too far ahead of the node clock: "f"{-message_age_us} us")
+            return 
 
         if message_age_us < 0:
-            self.get_logger().warning("Measurement timestamp is ahead of the node clock")
-            return
+            now_us = sample_timestamp_us
+            message_age_us = 0
 
         if message_age_us > stale_timeout_us:
             self.get_logger().warning("Rejected stale measurement")
@@ -730,7 +737,8 @@ def main(args=None):
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":
