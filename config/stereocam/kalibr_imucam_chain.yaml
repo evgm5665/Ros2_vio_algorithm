@@ -1,0 +1,36 @@
+%YAML:1.0
+
+
+#describes the cameras and their positions relative to IMU
+
+cam0: #left camera
+  T_imu_cam:
+    - [ 0.0,  0.0, 1.0,  0.0]
+    - [-1.0,  0.0, 0.0,  0.04]
+    - [ 0.0, -1.0, 0.0,  0.0]
+    - [ 0.0,  0.0, 0.0,  1.0]
+
+  cam_overlaps: [1]
+  camera_model: pinhole
+  distortion_coeffs: [ 0.0432 , -0.2899, -0.0020, 0.0038]
+  distortion_model: radtan
+  intrinsics: [401.1709, 399.2062, 321.1308, 195.6621]
+  resolution: [1280, 800]
+  rostopic: /stereocam/left/image_raw
+  timeshift_cam_imu: 0.0
+
+
+cam1: #right camera
+  T_imu_cam:
+    - [ 0.0,  0.0, 1.0,  0.0]
+    - [-1.0,  0.0, 0.0, -0.04]
+    - [ 0.0, -1.0, 0.0,  0.0]
+    - [ 0.0,  0.0, 0.0,  1.0]
+  cam_overlaps: [0]
+  camera_model: pinhole
+  distortion_coeffs: [ 0.2279, -1.2895, 0.0013, 0.0043]
+  distortion_model: radtan
+  intrinsics: [397.0545, 395.2804, 328.6409, 199.8220]
+  resolution: [1280, 800]
+  rostopic: /stereocam/right/image_raw
+  timeshift_cam_imu: 0.0
